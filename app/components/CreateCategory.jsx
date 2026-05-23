@@ -14,7 +14,7 @@ export default function CreateCategory({ refresh }) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${getToken()}`,
       },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ category_name: name }),
     });
 
     setName("");

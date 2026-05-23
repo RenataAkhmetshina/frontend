@@ -2,7 +2,22 @@
 
 import { useEffect, useState, use } from "react";
 import { FLASHCARD_SERVICE_URL, fetchWithAuth } from "../../lib/api"; 
+import { getToken } from "../../lib/auth"; 
 import Link from "next/link";
+
+function parseJwt(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return null;
+  }
+}
 
 export default function CategoryPage({ params: paramsPromise }) {
   const params = use(paramsPromise);
@@ -14,12 +29,24 @@ export default function CategoryPage({ params: paramsPromise }) {
   
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [flippedCards, setFlippedCards] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("create"); 
   const [currentCardId, setCurrentCardId] = useState(null);
   const [cardTitle, setCardTitle] = useState("");
   const [cardContent, setCardContent] = useState(""); 
+
+  useEffect(() => {
+    const token = getToken(); 
+    if (token) {
+      const decoded = parseJwt(token);
+      if (decoded && decoded.user_id) {
+        setCurrentUserId(parseInt(decoded.user_id));
+        console.log("Успешно вошли как User ID:", decoded.user_id); 
+      }
+    }
+  }, []);
 
   async function loadFlashcards() {
     setLoading(true);
@@ -32,6 +59,7 @@ export default function CategoryPage({ params: paramsPromise }) {
       
       setFlashcards(data || []);
       setHasMore(data && data.length === 5);
+      setFlippedCards({});
     } catch (err) {
       setError(err.message);
     } finally {
@@ -45,6 +73,13 @@ export default function CategoryPage({ params: paramsPromise }) {
     }
   }, [id, page]);
 
+  const toggleFlip = (cardId) => {
+    setFlippedCards(prev => ({
+      ...prev,
+      [cardId]: !prev[cardId]
+    }));
+  };
+
   const openCreateModal = () => {
     setModalMode("create");
     setCardTitle("");
@@ -52,7 +87,8 @@ export default function CategoryPage({ params: paramsPromise }) {
     setIsModalOpen(true);
   };
 
-  const openEditModal = (card) => {
+  const openEditModal = (card, e) => {
+    e.stopPropagation(); 
     setModalMode("edit");
     setCurrentCardId(card.flashcard_id);
     setCardTitle(card.title || "");
@@ -67,7 +103,8 @@ export default function CategoryPage({ params: paramsPromise }) {
       title: cardTitle,
       text: cardContent, 
       image: "",         
-      category_id: parseInt(id)
+      category_id: parseInt(id),
+      flashcard_id: modalMode === "edit" ? parseInt(currentCardId) : 0
     };
 
     const url = modalMode === "create" 
@@ -87,14 +124,19 @@ export default function CategoryPage({ params: paramsPromise }) {
         loadFlashcards();
       } else {
         const errData = await res.json();
-        alert(errData.error || "Operation failed");
+        if (res.status === 404 || res.status === 401) {
+            alert("You can only modify your own flashcards!");
+        } else {
+            alert(errData.error || "Operation failed");
+        }
       }
     } catch (err) {
       console.error(err);
     }
   };
 
-  const handleDeleteCard = async (cardId) => {
+  const handleDeleteCard = async (cardId, e) => {
+    e.stopPropagation(); 
     if (!confirm("Are you sure you want to delete this flashcard?")) return;
 
     try {
@@ -105,7 +147,11 @@ export default function CategoryPage({ params: paramsPromise }) {
       if (res.ok) {
         loadFlashcards();
       } else {
-        alert("Failed to delete flashcard");
+        if (res.status === 404 || res.status === 401) {
+            alert("You can only delete your own flashcards!");
+        } else {
+            alert("Failed to delete flashcard");
+        }
       }
     } catch (err) {
       console.error(err);
@@ -130,18 +176,49 @@ export default function CategoryPage({ params: paramsPromise }) {
       ) : (
         <>
           <div style={styles.grid}>
-            {flashcards.map((card) => (
-              <div key={card.flashcard_id} style={styles.card}>
-                <h3>{card.title}</h3>
-                <p>{card.text}</p>
-                
-                <div style={styles.cardActions}>
-                  <button onClick={() => openEditModal(card)} style={styles.editBtn}>Edit</button>
-                  <button onClick={() => handleDeleteCard(card.flashcard_id)} style={styles.deleteBtn}>Delete</button>
+            {flashcards.map((card) => {
+              const isFlipped = !!flippedCards[card.flashcard_id];
+              const isAuthor = String(card.user_id) === String(currentUserId);
+
+              return (
+                <div key={card.flashcard_id} style={styles.cardContainer}>
+                    <div 
+                    onClick={() => toggleFlip(card.flashcard_id)} 
+                    style={{
+                        ...styles.cardInner,
+                        transform: isFlipped ? "rotateY(180deg)" : "none"
+                    }}
+                    >
+                    
+                    <div style={styles.cardFront}>
+                        <span style={styles.badgeFront}>Question</span>
+                        <h3 style={styles.cardText}>{card.title}</h3>
+                        <span style={styles.hint}>Click to see answer</span>
+                    </div>
+
+                    
+                    <div style={styles.cardBack}>
+                        <span style={styles.badgeBack}>Answer</span>
+                        <p style={styles.cardText}>{card.text}</p>
+                        <span style={styles.hint}>Click to see question</span>
+                    </div>
+                    </div>
+
+                    
+                    {isAuthor ? (
+                    <div style={styles.cardActions}>
+                        <button onClick={(e) => openEditModal(card, e)} style={styles.editBtn}>Edit</button>
+                        <button onClick={(e) => handleDeleteCard(card.flashcard_id, e)} style={styles.deleteBtn}>Delete</button>
+                    </div>
+                    ) : (
+                    <div style={styles.cardActions}>
+                        <span style={{ fontSize: "0.85rem", color: "#888", fontStyle: "italic" }}>View only</span>
+                    </div>
+                    )}
                 </div>
-              </div>
-            ))}
-          </div>
+                );
+            })}
+            </div>
 
           <div style={styles.pagination}>
             <button 
@@ -199,11 +276,25 @@ const styles = {
   topNav: { display: "flex", justifyContent: "space-between", alignItems: "center" },
   backLink: { color: "#0070f3", textDecoration: "underline" },
   addBtn: { background: "#28a745", color: "#fff", border: "none", padding: "0.5rem 1rem", borderRadius: "5px", cursor: "pointer" },
-  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "1rem", marginTop: "1rem" },
-  card: { border: "1px solid #ccc", padding: "1.5rem", borderRadius: "8px", boxShadow: "0 2px 4px rgba(0,0,0,0.05)", background: "#fff", display: "flex", flexDirection: "column", justifyContent: "space-between" },
-  cardActions: { display: "flex", gap: "0.5rem", marginTop: "1rem", borderTop: "1px solid #eee", paddingTop: "0.5rem" },
-  editBtn: { background: "#ffc107", color: "#000", border: "none", padding: "0.25rem 0.5rem", borderRadius: "4px", cursor: "pointer", fontSize: "0.9rem" },
-  deleteBtn: { background: "#dc3545", color: "#fff", border: "none", padding: "0.25rem 0.5rem", borderRadius: "4px", cursor: "pointer", fontSize: "0.9rem" },
+  
+  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "2rem", marginTop: "1rem" },
+  
+  cardContainer: { height: "280px", perspective: "1000px", display: "flex", flexDirection: "column", justifyContent: "space-between" },
+  
+  cardInner: { width: "100%", height: "220px", position: "relative", transformStyle: "preserve-3d", transition: "transform 0.6s", cursor: "pointer" },
+  
+  cardFront: { position: "absolute", width: "100%", height: "100%", backfaceVisibility: "hidden", border: "1px solid #ccc", padding: "1.5rem", borderRadius: "8px", boxShadow: "0 2px 4px rgba(0,0,0,0.05)", background: "#fff", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", boxSizing: "border-box" },
+  cardBack: { position: "absolute", width: "100%", height: "100%", backfaceVisibility: "hidden", border: "1px solid #0070f3", padding: "1.5rem", borderRadius: "8px", boxShadow: "0 2px 4px rgba(0,0,0,0.05)", background: "#f0f7ff", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", transform: "rotateY(180deg)", boxSizing: "border-box" },
+  
+  cardText: { textAlign: "center", wordBreak: "break-word", margin: "10px 0" },
+  hint: { fontSize: "0.8rem", color: "#999", marginTop: "auto" },
+  badgeFront: { fontSize: "0.75rem", background: "#e0e0e0", padding: "2px 6px", borderRadius: "4px", fontWeight: "bold", color: "#555" },
+  badgeBack: { fontSize: "0.75rem", background: "#0070f3", padding: "2px 6px", borderRadius: "4px", fontWeight: "bold", color: "#fff" },
+
+  cardActions: { display: "flex", gap: "0.5rem", justifyContent: "flex-end", height: "35px", marginTop: "5px" },
+  editBtn: { background: "#ffc107", color: "#000", border: "none", padding: "0.25rem 0.75rem", borderRadius: "4px", cursor: "pointer", fontSize: "0.9rem" },
+  deleteBtn: { background: "#dc3545", color: "#fff", border: "none", padding: "0.25rem 0.75rem", borderRadius: "4px", cursor: "pointer", fontSize: "0.9rem" },
+  
   pagination: { display: "flex", gap: "1rem", justifyContent: "center", marginTop: "2rem" },
   pageBtn: { padding: "0.5rem 1rem", background: "#f0f0f0", border: "1px solid #ccc", borderRadius: "4px", cursor: "pointer" },
   modalOverlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center" },
