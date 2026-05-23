@@ -1,62 +1,194 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { FLASHCARD_SERVICE_URL, fetchWithAuth } from "../../lib/api"; 
-import { useParams } from "next/navigation";
 import Link from "next/link";
 
-export default function CategoryPage() {
-  const { id } = useParams(); 
+export default function CategoryPage({ params: paramsPromise }) {
+  const params = use(paramsPromise);
+  const id = params.id;
+
   const [flashcards, setFlashcards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState("create"); 
+  const [currentCardId, setCurrentCardId] = useState(null);
+  const [cardTitle, setCardTitle] = useState("");
+  const [cardContent, setCardContent] = useState(""); 
+
+  async function loadFlashcards() {
+    setLoading(true);
+    try {
+      const res = await fetchWithAuth(`${FLASHCARD_SERVICE_URL}/api/flashcards?category_id=${id}&page=${page}`);
+      if (!res.ok) {
+        throw new Error("Failed to load flashcards");
+      }
+      const data = await res.json();
+      
+      setFlashcards(data || []);
+      setHasMore(data && data.length === 5);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    if (!id) return;
-
-    async function loadFlashcards() {
-      try {
-        const res = await fetchWithAuth(`${FLASHCARD_SERVICE_URL}/api/flashcards?category_id=${id}`);
-        
-        if (!res.ok) {
-          throw new Error("Failed to load flashcards for this category");
-        }
-        
-        const data = await res.json();
-        setFlashcards(data || []);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+    if (id) {
+      loadFlashcards();
     }
+  }, [id, page]);
 
-    loadFlashcards();
-  }, [id]);
+  const openCreateModal = () => {
+    setModalMode("create");
+    setCardTitle("");
+    setCardContent("");
+    setIsModalOpen(true);
+  };
 
-  if (loading) return <div>Loading flashcards...</div>;
-  if (error) return <div style={{ color: "red" }}>Error: {error}</div>;
+  const openEditModal = (card) => {
+    setModalMode("edit");
+    setCurrentCardId(card.flashcard_id);
+    setCardTitle(card.title || "");
+    setCardContent(card.text || ""); 
+    setIsModalOpen(true);
+  };
+
+  const handleSaveCard = async (e) => {
+    e.preventDefault();
+    
+    const payload = {
+      title: cardTitle,
+      text: cardContent, 
+      image: "",         
+      category_id: parseInt(id)
+    };
+
+    const url = modalMode === "create" 
+      ? `${FLASHCARD_SERVICE_URL}/api/flashcards`
+      : `${FLASHCARD_SERVICE_URL}/api/flashcards/${currentCardId}`;
+      
+    const method = modalMode === "create" ? "POST" : "PUT";
+
+    try {
+      const res = await fetchWithAuth(url, {
+        method: method,
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        setIsModalOpen(false);
+        loadFlashcards();
+      } else {
+        const errData = await res.json();
+        alert(errData.error || "Operation failed");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteCard = async (cardId) => {
+    if (!confirm("Are you sure you want to delete this flashcard?")) return;
+
+    try {
+      const res = await fetchWithAuth(`${FLASHCARD_SERVICE_URL}/api/flashcards/${cardId}`, {
+        method: "DELETE"
+      });
+
+      if (res.ok) {
+        loadFlashcards();
+      } else {
+        alert("Failed to delete flashcard");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   return (
     <div>
-      <Link href="/" style={{ color: "#0070f3", textDecoration: "underline" }}>
-        ← Back to Categories
-      </Link>
+      <div style={styles.topNav}>
+        <Link href="/" style={styles.backLink}>← Back to Categories</Link>
+        <button onClick={openCreateModal} style={styles.addBtn}>+ Add Flashcard</button>
+      </div>
       
       <h1 style={{ marginTop: "1rem" }}>Category Flashcards</h1>
       
-      {flashcards.length === 0 ? (
+      {loading ? (
+        <div>Loading flashcards...</div>
+      ) : error ? (
+        <div style={{ color: "red" }}>Error: {error}</div>
+      ) : flashcards.length === 0 ? (
         <p style={{ marginTop: "1rem" }}>No flashcards in this category yet.</p>
       ) : (
-        <div style={styles.grid}>
-          {flashcards.map((card) => (
-            <div key={card.id} style={styles.card}>
-              <h4>{card.question}</h4>
-              <p style={{ color: "#666", fontSize: "0.9rem", marginTop: "0.5rem" }}>
-                <i>Click to see answer (coming soon)</i>
-              </p>
-            </div>
-          ))}
+        <>
+          <div style={styles.grid}>
+            {flashcards.map((card) => (
+              <div key={card.flashcard_id} style={styles.card}>
+                <h3>{card.title}</h3>
+                <p>{card.text}</p>
+                
+                <div style={styles.cardActions}>
+                  <button onClick={() => openEditModal(card)} style={styles.editBtn}>Edit</button>
+                  <button onClick={() => handleDeleteCard(card.flashcard_id)} style={styles.deleteBtn}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={styles.pagination}>
+            <button 
+              disabled={page === 1} 
+              onClick={() => setPage(p => p - 1)}
+              style={styles.pageBtn}
+            >
+              Previous
+            </button>
+            <span style={{ alignSelf: "center" }}>Page {page}</span>
+            <button 
+              disabled={!hasMore} 
+              onClick={() => setPage(p => p + 1)}
+              style={styles.pageBtn}
+            >
+              Next
+            </button>
+          </div>
+        </>
+      )}
+
+      {isModalOpen && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <h2>{modalMode === "create" ? "Create Flashcard" : "Edit Flashcard"}</h2>
+            <form onSubmit={handleSaveCard} style={styles.form}>
+              <input 
+                type="text" 
+                placeholder="Flashcard Title / Question" 
+                value={cardTitle}
+                onChange={(e) => setCardTitle(e.target.value)}
+                required
+                style={styles.input}
+              />
+              <textarea 
+                placeholder="Description / Answer" 
+                value={cardContent}
+                onChange={(e) => setCardContent(e.target.value)}
+                required
+                style={{ ...styles.input, height: "100px", resize: "none" }}
+              />
+              <div style={styles.modalActions}>
+                <button type="button" onClick={() => setIsModalOpen(false)} style={styles.cancelBtn}>Cancel</button>
+                <button type="submit" style={styles.saveBtn}>Save</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
@@ -64,6 +196,21 @@ export default function CategoryPage() {
 }
 
 const styles = {
+  topNav: { display: "flex", justifyContent: "space-between", alignItems: "center" },
+  backLink: { color: "#0070f3", textDecoration: "underline" },
+  addBtn: { background: "#28a745", color: "#fff", border: "none", padding: "0.5rem 1rem", borderRadius: "5px", cursor: "pointer" },
   grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "1rem", marginTop: "1rem" },
-  card: { border: "1px solid #ccc", padding: "1.5rem", borderRadius: "8px", boxShadow: "0 2px 4px rgba(0,0,0,0.05)", background: "#fff" }
+  card: { border: "1px solid #ccc", padding: "1.5rem", borderRadius: "8px", boxShadow: "0 2px 4px rgba(0,0,0,0.05)", background: "#fff", display: "flex", flexDirection: "column", justifyContent: "space-between" },
+  cardActions: { display: "flex", gap: "0.5rem", marginTop: "1rem", borderTop: "1px solid #eee", paddingTop: "0.5rem" },
+  editBtn: { background: "#ffc107", color: "#000", border: "none", padding: "0.25rem 0.5rem", borderRadius: "4px", cursor: "pointer", fontSize: "0.9rem" },
+  deleteBtn: { background: "#dc3545", color: "#fff", border: "none", padding: "0.25rem 0.5rem", borderRadius: "4px", cursor: "pointer", fontSize: "0.9rem" },
+  pagination: { display: "flex", gap: "1rem", justifyContent: "center", marginTop: "2rem" },
+  pageBtn: { padding: "0.5rem 1rem", background: "#f0f0f0", border: "1px solid #ccc", borderRadius: "4px", cursor: "pointer" },
+  modalOverlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center" },
+  modalContent: { background: "#fff", padding: "2rem", borderRadius: "8px", width: "400px", boxShadow: "0 4px 6px rgba(0,0,0,0.1)" },
+  form: { display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" },
+  input: { padding: "0.5rem", borderRadius: "4px", border: "1px solid #ccc", fontSize: "1rem" },
+  modalActions: { display: "flex", justifyContent: "flex-end", gap: "0.5rem" },
+  cancelBtn: { background: "#6c757d", color: "#fff", border: "none", padding: "0.5rem 1rem", borderRadius: "4px", cursor: "pointer" },
+  saveBtn: { background: "#0070f3", color: "#fff", border: "none", padding: "0.5rem 1rem", borderRadius: "4px", cursor: "pointer" }
 };
