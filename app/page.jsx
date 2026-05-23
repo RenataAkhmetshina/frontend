@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { FLASHCARD_SERVICE_URL, fetchWithAuth } from "./lib/api";
 import Link from "next/link";
-import Sidebar from "./components/Sidebar"; 
+import Sidebar from "./components/Sidebar";
 
 export default function HomePage() {
   const [categories, setCategories] = useState([]);
@@ -40,7 +40,7 @@ export default function HomePage() {
     try {
       const res = await fetchWithAuth(`${FLASHCARD_SERVICE_URL}/api/categories`, {
         method: "POST",
-        body: JSON.stringify({ name: categoryName }),
+        body: JSON.stringify({ category_name: categoryName }),
       });
 
       if (res.ok) {
@@ -73,7 +73,6 @@ export default function HomePage() {
 
   return (
     <div style={styles.container}>
-
       <Sidebar 
         onCreate={handleCreateCategory} 
         onToggleFavorites={handleToggleFavorites}
@@ -87,9 +86,9 @@ export default function HomePage() {
             <p>No categories yet. Create a category</p>
           ) : (
             categories.map((cat) => (
-              <div key={cat.id} style={styles.card}>
-                <h3>{cat.name}</h3>
-                <Link href={`/category/${cat.id}`}>Open flashcards</Link>
+              <div key={cat.category_id} style={styles.card}>
+                <h3>{cat.category_name}</h3>
+                <Link href={`/category/${cat.category_id}`}>Open flashcards</Link>
               </div>
             ))
           )}
@@ -103,6 +102,6 @@ const styles = {
   container: { display: "flex", gap: "2rem", marginTop: "1rem" },
   content: { flex: 1 },
   grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "1rem", marginTop: "1rem" },
-  card: { border: "1px solid #ccc", padding: "1rem", borderRadius: "8px", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" },
+  card: { border: "1px solid #ccc", padding: "1rem", borderRadius: "8px", boxShadow: "0 2px 4px rgba(0,0,0,0.1)", background: "#fff" },
   signInBtn: { display: "inline-block", background: "#0070f3", color: "#fff", padding: "0.5rem 1rem", borderRadius: "5px", textDecoration: "none", marginTop: "1rem" }
 };
