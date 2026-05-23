@@ -1,6 +1,6 @@
 "use client";
 
-import { API } from "../lib/api";
+import { FLASHCARD_SERVICE_URL } from "../lib/api"; 
 import { getToken } from "../lib/auth";
 import { useState } from "react";
 
@@ -8,7 +8,7 @@ export default function CreateCategory({ refresh }) {
   const [name, setName] = useState("");
 
   const create = async () => {
-    await fetch(`${API}/categories`, {
+    await fetch(`${FLASHCARD_SERVICE_URL}/api/categories`, { 
       method: "POST",
       headers: {
         "Content-Type": "application/json",
