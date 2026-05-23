@@ -76,7 +76,7 @@ export default function Home() {
     : categories;
 
   return (
-    <div style={{ display: "flex", width: "100%", minHeight: "80vh", gap: "2rem" }}>
+    <div style={{ display: "flex", width: "100%", minHeight: "80vh", gap: "2rem", padding: "1rem" }}>
       
       <Sidebar 
         onCreate={() => setIsModalOpen(true)} 
@@ -85,7 +85,7 @@ export default function Home() {
       />
 
       <div style={{ flex: 1 }}>
-        <h1 className="text-3xl font-bold mb-6" style={{ margin: "0 0 1.5rem 0" }}>
+        <h1 style={{ fontSize: "1.875rem", fontWeight: "700", margin: "0 0 1.5rem 0", color: "#111827" }}>
           {showFavoritesOnly ? "Favorite Categories" : "All Categories"}
         </h1>
 
@@ -101,78 +101,146 @@ export default function Home() {
             return (
               <div 
                 key={category.category_id}
-                className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
                 style={{ 
                   padding: "1.5rem", 
                   display: "flex", 
                   flexDirection: "column", 
                   justifyContent: "space-between",
-                  minHeight: "140px",
+                  minHeight: "160px", 
                   position: "relative",
-                  boxSizing: "border-box"
+                  boxSizing: "border-box",
+                  backgroundColor: "#ffffff",
+                  borderRadius: "16px",
+                  border: "1px solid #e5e7eb",
+                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)",
+                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-4px)";
+                  e.currentTarget.style.boxShadow = "0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)";
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
+                <div style={{ width: "100%" }}>
                   <Link 
                     href={`/category/${category.category_id}`}
-                    style={{ textDecoration: "none", display: "inline-block" }}
+                    style={{ textDecoration: "none", display: "block" }}
                   >
-                    <h3 className="text-xl font-semibold text-gray-900 hover:text-blue-600 transition-colors" style={{ margin: 0, cursor: "pointer" }}>
+                    <h3 style={{ 
+                      margin: 0, 
+                      cursor: "pointer", 
+                      fontSize: "1.3rem", 
+                      fontWeight: "700", 
+                      color: "#1e293b",
+                      lineHeight: "1.4"
+                    }}>
                       {category.category_name}
                     </h3>
                   </Link>
-                  
+                </div>
+
+                <div style={{ display: "flex", gap: "0.5rem", marginTop: "1.5rem", width: "100%" }}>
+                  <Link 
+                    href={`/category/${category.category_id}`} 
+                    style={{ 
+                      flex: 1, 
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: "#c5cc82", 
+                      color: "#ffffff",
+                      padding: "0.55rem 0.75rem",
+                      borderRadius: "8px",
+                      fontSize: "0.85rem",
+                      fontWeight: "600",
+                      transition: "background-color 0.2s"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#c5cc82"}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#c5cc82"}
+                  >
+                    View Cards →
+                  </Link>
+
                   <button
                     onClick={(e) => toggleFavorite(category.category_id, e)}
-                    className="transition-transform hover:scale-110 focus:outline-none"
                     style={{ 
-                      fontSize: "1.5rem",
-                      background: "none",
-                      border: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.35rem",
+                      backgroundColor: isFav ? "#fdf2f8" : "#f8fafc", 
+                      color: isFav ? "#e27396" : "#b0b0b0", 
+                      border: isFav ? "1px solid #fbcfe8" : "1px solid #e2e8f0",
+                      padding: "0.55rem 0.75rem",
+                      borderRadius: "8px",
+                      fontSize: "0.85rem",
+                      fontWeight: "500",
                       cursor: "pointer",
-                      padding: "0 0 0 8px",
-                      color: isFav ? "#ffc107" : "#ccc",
-                      lineHeight: 1
+                      transition: "all 0.2s ease"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = isFav ? "#fce7f3" : "#f1f5f9";
+                      if (!isFav) e.currentTarget.style.color = "#334155";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = isFav ? "#fdf2f8" : "#f8fafc";
+                      if (!isFav) e.currentTarget.style.color = "#64748b";
                     }}
                     title={isFav ? "Remove from Favorites" : "Add to Favorites"}
                   >
-                    {isFav ? "♥" : "♡"}
+                    <span style={{ fontSize: "1rem", lineHeight: 1 }}>
+                      {isFav ? "♥" : "♡"}
+                    </span>
+                    <span>{isFav ? "Saved" : "Save"}</span>
                   </button>
                 </div>
 
-                <div style={{ marginTop: "1rem" }}>
-                  <Link 
-                    href={`/category/${category.category_id}`} 
-                    className="text-blue-500 hover:text-blue-700 hover:underline"
-                    style={{ fontSize: "0.875rem", textDecoration: "none" }}
-                  >
-                    Click to view flashcards →
-                  </Link>
-                </div>
               </div>
             );
           })}
         </div>
 
         {displayedCategories.length === 0 && (
-          <p className="text-gray-500 mt-6 text-center italic" style={{ textAlign: "center", fontStyle: "italic", color: "#9aa0a6" }}>
+          <p style={{ textAlign: "center", fontStyle: "italic", color: "#9ca3af", marginTop: "1.5rem" }}>
             {showFavoritesOnly ? "No favorite categories yet." : "No categories found."}
           </p>
         )}
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 50 }}>
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96" style={{ backgroundColor: "#fff", padding: "1.5rem", borderRadius: "0.5rem", width: "24rem" }}>
-            <h2 className="text-xl font-bold mb-4" style={{ margin: "0 0 1rem 0" }}>Create New Category</h2>
-            <CreateCategory refresh={() => { loadCategories(); setIsModalOpen(false); }} />
-            <button 
-              onClick={() => setIsModalOpen(false)} 
-              className="mt-4 text-sm text-gray-500 hover:underline w-full text-center"
-              style={{ marginTop: "1rem", background: "none", border: "none", width: "100%", textAlign: "center", color: "#6b7280", cursor: "pointer" }}
-            >
-              Cancel
-            </button>
+        <div style={{ 
+          position: "fixed", 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          backgroundColor: "rgba(15, 23, 42, 0.6)", 
+          backdropFilter: "blur(4px)", 
+          display: "flex", 
+          justifyContent: "center", 
+          alignItems: "center", 
+          zIndex: 100 
+        }}>
+          <div style={{ 
+            backgroundColor: "#ffffff", 
+            padding: "2rem", 
+            borderRadius: "16px", 
+            width: "26rem", 
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)", 
+            boxSizing: "border-box" 
+          }}>
+            <h2 style={{ fontSize: "1.5rem", fontWeight: "700", margin: "0 0 1.25rem 0", color: "#0f172a" }}>
+              Create New Category
+            </h2>
+            
+            <CreateCategory 
+              refresh={() => { loadCategories(); setIsModalOpen(false); }} 
+              onClose={() => setIsModalOpen(false)} 
+            />
           </div>
         </div>
       )}

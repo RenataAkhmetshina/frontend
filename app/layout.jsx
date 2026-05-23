@@ -51,10 +51,10 @@ export default function RootLayout({ children }) {
 }
 
 const styles = {
-  header: { background: "#333", color: "#fff", padding: "1rem 2rem" },
+  header: { background: "#e27396", color: "#fff", padding: "1rem 2rem" },
   nav: { display: "flex", justifyContent: "space-between", alignItems: "center" },
   logo: { color: "#fff", fontSize: "1.5rem", fontWeight: "bold", textDecoration: "none" },
   link: { color: "#fff", marginLeft: "1rem", textDecoration: "none" },
-  logoutBtn: { background: "none", border: "none", color: "#ff4d4d", marginLeft: "1rem", cursor: "pointer", fontSize: "1rem" },
+  logoutBtn: { background: "none", border: "none", color: "#a0dce1", marginLeft: "1rem", cursor: "pointer", fontSize: "1rem" },
   main: { padding: "2rem", maxWidth: "1400px", margin: "0 auto" }
 };

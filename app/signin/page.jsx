@@ -100,6 +100,6 @@ const styles = {
   container: { maxWidth: "400px", margin: "4rem auto", padding: "2rem", border: "1px solid #ddd", borderRadius: "8px" },
   form: { display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" },
   input: { padding: "0.5rem", fontSize: "1rem", borderRadius: "4px", border: "1px solid #ccc" },
-  button: { padding: "0.7rem", fontSize: "1rem", background: "#0070f3", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" },
-  toggleBtn: { background: "none", border: "none", color: "#0070f3", marginTop: "1rem", cursor: "pointer", textDecoration: "underline" }
+  button: { padding: "0.7rem", fontSize: "1rem", background: "#e27396", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" },
+  toggleBtn: { background: "none", border: "none", color: "#e27396", marginTop: "1rem", cursor: "pointer", textDecoration: "underline" }
 };
